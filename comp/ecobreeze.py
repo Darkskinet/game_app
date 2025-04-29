@@ -130,11 +130,9 @@ def show_game_page():
 
     col1, col2 = st.columns(2)
     with col1:
-        if st.image(Image.open(ecobot_path).resize((200, 100)), caption="Talk to EcoBot", use_column_width=False, on_click=set_page, kwargs={'page': 'ecobot'}):
-            pass
+        st.image(Image.open(ecobot_path).resize((200, 100)), caption="Talk to EcoBot", use_column_width=False, on_click=set_page, kwargs={'page': 'ecobot'})
     with col2:
-        if st.image(Image.open(ecoquest_path).resize((200, 100)), caption="Explore EcoQuests", use_column_width=False, on_click=set_page, kwargs={'page': 'ecoquest'}):
-            pass
+        st.image(Image.open(ecoquest_path).resize((200, 100)), caption="Explore EcoQuests", use_column_width=False, on_click=set_page, kwargs={'page': 'ecoquest'})
 
     pm25_status, pm25_color = get_pm25_status(st.session_state['pm25_value'])
     st.markdown(f"<h2 style='text-align: center;'>{st.session_state['pm25_value']} μg/m³ of PM2.5</h2>", unsafe_allow_html=True)
@@ -148,29 +146,21 @@ def show_game_page():
 
 def show_ecoquest_page():
     st.image(Image.open(background_path), use_column_width=True)
-    if st.image(Image.open(back_path).resize((100, 50)), caption="Back to Game", use_column_width=False, on_click=set_page, kwargs={'page': 'game'}):
-        pass
+    st.image(Image.open(back_path).resize((100, 50)), caption="Back to Game", use_column_width=False, on_click=set_page, kwargs={'page': 'game'})
     st.title("EcoQuests")
     col1, col2 = st.columns(2)
-    if col1.image(Image.open(level1_path).resize((200, 100)), caption="Plant a Tree!", use_column_width=False, on_click=set_page, kwargs={'page': 'task1'}):
-        pass
-    if col1.image(Image.open(level2_path).resize((200, 100)), caption="Listen to Calm Music!", use_column_width=False, on_click=set_page, kwargs={'page': 'task2'}):
-        pass
-    if col1.image(Image.open(level3_path).resize((200, 100)), caption="Turn off the Lights!", use_column_width=False, on_click=set_page, kwargs={'page': 'task3'}):
-        pass
-    if col2.image(Image.open(level4_path).resize((200, 100)), caption="Go for a Walk!", use_column_width=False, on_click=set_page, kwargs={'page': 'task4'}):
-        pass
-    if col2.image(Image.open(level5_path).resize((200, 100)), caption="Do some Exercise!", use_column_width=False, on_click=set_page, kwargs={'page': 'task5'}):
-        pass
+    col1.image(Image.open(level1_path).resize((200, 100)), caption="Plant a Tree!", use_column_width=False, on_click=set_page, kwargs={'page': 'task1'})
+    col1.image(Image.open(level2_path).resize((200, 100)), caption="Listen to Calm Music!", use_column_width=False, on_click=set_page, kwargs={'page': 'task2'})
+    col1.image(Image.open(level3_path).resize((200, 100)), caption="Turn off the Lights!", use_column_width=False, on_click=set_page, kwargs={'page': 'task3'})
+    col2.image(Image.open(level4_path).resize((200, 100)), caption="Go for a Walk!", use_column_width=False, on_click=set_page, kwargs={'page': 'task4'})
+    col2.image(Image.open(level5_path).resize((200, 100)), caption="Do some Exercise!", use_column_width=False, on_click=set_page, kwargs={'page': 'task5'})
 
 def show_task_page(task_number, task_description, points):
     st.image(Image.open(background_path), use_column_width=True)
-    if st.image(Image.open(back_path).resize((100, 50)), caption="Back to EcoQuests", use_column_width=False, on_click=set_page, kwargs={'page': 'ecoquest'}):
-        pass
+    st.image(Image.open(back_path).resize((100, 50)), caption="Back to EcoQuests", use_column_width=False, on_click=set_page, kwargs={'page': 'ecoquest'})
     st.title(f"Task {task_number}")
     st.subheader(task_description)
-    if st.image(Image.open(completed_path).resize((200, 100)), caption="Completed", use_column_width=False, on_click=task_completed, kwargs={'points': points}):
-        pass
+    st.image(Image.open(completed_path).resize((200, 100)), caption="Completed", use_column_width=False, on_click=task_completed, kwargs={'points': points})
 
 def task_completed(points):
     st.session_state['point_value'] += points
@@ -181,8 +171,7 @@ def task_completed(points):
 
 def show_ecobot_page():
     st.image(Image.open(background_path), use_column_width=True)
-    if st.image(Image.open(back_path).resize((100, 50)), caption="Back to Game", use_column_width=False, on_click=set_page, kwargs={'page': 'game'}):
-        pass
+    st.image(Image.open(back_path).resize((100, 50)), caption="Back to Game", use_column_width=False, on_click=set_page, kwargs={'page': 'game'})
     st.title("EcoBot Chat")
 
     for sender, message in st.session_state['chat_log']:

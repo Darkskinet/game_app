@@ -1,495 +1,50 @@
-from tkinter import *
-import tkinter as tk
-from tkinter import ttk
-from PIL import Image, ImageTk
+import streamlit as st
+from PIL import Image
 import os
 import random
+import pandas as pd
+import time
 
-# Main app
-app = tk.Tk()
-app.title("EcoBreeze")
-app.geometry('800x800')
-
-name = ""
-point_value = 0
-
-# Script directory
+# --- PATHS ---
 script_dir = os.path.dirname(os.path.abspath(__file__))
-
-# Image paths
 background_path = os.path.join(script_dir, "background.png")
+ecoquest_path = os.path.join(script_dir, "ecoquest.jpg")
+ecobot_path = os.path.join(script_dir, "ecobot.png")
+level1_path = os.path.join(script_dir, "level1.jpg")
+level2_path = os.path.join(script_dir, "level2.png")
+level3_path = os.path.join(script_dir, "level3.png")
+level4_path = os.path.join(script_dir, "level4.png")
+level5_path = os.path.join(script_dir, "level5.png")
+completed_path = os.path.join(script_dir, "completed.png")
+completed_tick_path = os.path.join(script_dir, "completed_tick.png")
+back_path = os.path.join(script_dir, "back.png")
+
+# --- GLOBAL VARIABLES ---
+if 'name' not in st.session_state:
+    st.session_state['name'] = ""
+if 'point_value' not in st.session_state:
+    st.session_state['point_value'] = 0
+if 'current_page' not in st.session_state:
+    st.session_state['current_page'] = 'login'
+if 'pm25_value' not in st.session_state:
+    st.session_state['pm25_value'] = random.randint(0, 125)
+if 'leaderboard_data' not in st.session_state:
+    st.session_state['leaderboard_data'] = pd.DataFrame({
+        'Position': [],
+        'Name': [],
+        'Score': [],
+        'Status': []
+    })
+if 'bot_users' not in st.session_state:
+    st.session_state['bot_users'] = ["Charlie", "Mark", "Bob"]
+if 'user_scores' not in st.session_state:
+    st.session_state['user_scores'] = {user: random.randint(100, 400) for user in st.session_state['bot_users']}
+    st.session_state['user_scores'][st.session_state['name']] = st.session_state['point_value']
+if 'chat_sequence_index' not in st.session_state:
+    st.session_state['chat_sequence_index'] = 0
+if 'chat_log' not in st.session_state:
+    st.session_state['chat_log'] = []
 
-# Load background image
-background_img = Image.open(background_path)
-background_pic = ImageTk.PhotoImage(background_img)
-
-# Set background image
-background_label = tk.Label(app, image=background_pic)
-background_label.place(x=0, y=0, relwidth=1, relheight=1)
-
-# Username input
-login_label = tk.Label(app, text="QUICK LOGIN", font=("Arial", 24))
-login_label.place(x=300, y=200)
-
-login_entry = tk.Entry(app, font=("Arial", 20))
-login_entry.place(x=250, y=270)
-
-login_button = tk.Button(app, text="START", font=("Arial", 18))
-login_button.place(x=340, y=330)
-
-# Global variables
-change_random_job = None
-update_table_job = None
-widgets_to_hide = []
-
-def start_game():
-    global name
-    name = login_entry.get().strip()
-
-    if not name:
-        login_label.config(text="Please enter your name!")
-        return
-
-    login_label.place_forget()
-    login_entry.place_forget()
-    login_button.place_forget()
-
-    setup_game()
-
-login_button.config(command=start_game)
-
-def setup_game():
-    global welcome, ecoquest_button, current_pm25_value, random_label, pm25_status_label, leaderboard_label, table
-    global change_random_job, update_table_job, points_label, point_value
-
-    # Welcome
-    welcome = tk.Label(app, text=f"Welcome, {name}", font=("Arial", 24))
-    welcome.place(x=340, y=50)
-
-    # EcoQuest Button
-    ecoquest_path = os.path.join(script_dir, "ecoquest.jpg")
-    ecoquest_img = Image.open(ecoquest_path).resize((200, 100))
-    ecoquest_pic = ImageTk.PhotoImage(ecoquest_img)
-
-    ecoquest_button = tk.Button(app, image=ecoquest_pic, command=open_ecoquest)
-    ecoquest_button.image = ecoquest_pic
-    ecoquest_button.place(x=580, y=150)
-
-    # EcoBot button
-    ecobot_path = os.path.join(script_dir, "ecobot.png")
-    ecobot_img = Image.open(ecobot_path).resize((200, 100))
-    ecobot_pic = ImageTk.PhotoImage(ecobot_img)
-
-    ecobot_button = tk.Button(app, image=ecobot_pic, command=ecobot)
-    ecobot_button.image = ecobot_pic
-    ecobot_button.place(x=10, y=150)
-
-    # PM2.5 Display
-    current_pm25_value = random.randint(0, 125)
-    random_label = tk.Label(app, text=f"{current_pm25_value}μg/m3 of PM2.5", font=("Arial", 24))
-    random_label.place(x=445, y=400)
-
-    pm25_status_label = tk.Label(app, text="", font=("Gabriel Sans", 20), wraplength=500, justify="center")
-    pm25_status_label.place(x=300, y=280, width=500, height=100)
-
-    # Points display
-    points_label = tk.Label(app, text=f"Points: {point_value}", font=("Arial", 24))
-    points_label.place(x=590, y=10)
-
-    def change_random_number():
-        global current_pm25_value, change_random_job
-        try:
-            current_pm25_value = random.randint(0, 125)
-            random_label.config(text=f'{current_pm25_value}μg/m3 of PM2.5')
-
-            if current_pm25_value < 9:
-                status = "Air quality is good and poses little or no risk!"
-                status_color = "green"
-            elif 9 <= current_pm25_value < 35:
-                status = "Acceptable, but sensitive groups may feel slight effects."
-                status_color = "yellow"
-            elif 35 <= current_pm25_value < 55:
-                status = "People with asthma, children, and old people should be cautious."
-                status_color = "orange"
-            elif 55 <= current_pm25_value < 80:
-                status = "Everyone may begin to feel health effects."
-                status_color = "#f47126"
-            else:
-                status = "Serious health effects, emergency conditions."
-                status_color = "red"
-
-            pm25_status_label.config(text=status, fg=status_color)
-
-        except tk.TclError:
-            return
-        
-        change_random_job = app.after(1500, change_random_number)
-
-    change_random_number()
-
-    # Leaderboard
-    leaderboard_label = tk.Label(app, text="LEADERBOARD", font=("Arial", 24))
-    leaderboard_label.place(x=85, y=430)
-
-    table = ttk.Treeview(app, columns=("Position", "Name", "Score", "Status"), show="headings")
-    table.heading("Position", text="Position")
-    table.heading("Name", text="Name")
-    table.heading("Score", text="Score")
-    table.heading("Status", text="Status")
-
-    table.column("Position", width=80)
-    table.column("Name", width=150)
-    table.column("Score", width=100)
-    table.column("Status", width=200)
-
-    table.place(x=5, y=500, height=280)
-
-    bot_users = ["Charlie", "Mark", "Bob"]
-    user_scores = {user: random.randint(100, 400) for user in bot_users}
-    user_scores[name] = point_value
-
-    def update_table():
-        global update_table_job
-        try:
-            user_to_update = random.choice(bot_users)
-            user_scores[user_to_update] += random.randint(1, 100)
-
-            table.delete(*table.get_children())
-
-            all_users = bot_users + [name]
-            random.shuffle(all_users)
-
-            sorted_users = sorted([(user, user_scores[user]) for user in all_users], key=lambda x: x[1], reverse=True)
-            positions = ["1st", "2nd", "3rd"] + [f"{i+1}th" for i in range(3, len(sorted_users))]
-
-            for idx, (user, score) in enumerate(sorted_users):
-                status = "Good" if score > 400 else "Needs Improvement"
-                row_id = table.insert("", "end", values=(positions[idx], user, score, status))
-
-                if idx < 3:
-                    table.tag_configure(f"green_row_{idx}", background="lightgreen")
-                    table.item(row_id, tags=(f"green_row_{idx}",))
-
-        except tk.TclError:
-            return
-
-        update_table_job = app.after(1000, update_table)
-
-    update_table()
-
-    widgets_to_hide.clear()
-    widgets_to_hide.extend([welcome, ecoquest_button, random_label, pm25_status_label,
-                           leaderboard_label, table, points_label])
-
-def open_ecoquest():
-    global change_random_job, update_table_job, level1_button, level2_button
-
-    # Cancel timers
-    if change_random_job:
-        app.after_cancel(change_random_job)
-    if update_table_job:
-        app.after_cancel(update_table_job)
-
-    # Hide and destroy old widgets
-    for widget in widgets_to_hide:
-        widget.destroy()
-
-    # Level 1 button
-    level1_path = os.path.join(script_dir, "level1.jpg")
-    level1_img = Image.open(level1_path).resize((200, 100))
-    level1_pic = ImageTk.PhotoImage(level1_img)
-
-    level1_button = tk.Button(app, image=level1_pic, command=lambda: open_task1())
-    level1_button.image = level1_pic
-    level1_button.place(x=320, y=50)
-
-    # Level 2 button
-    level2_path = os.path.join(script_dir, "level2.png")
-    level2_img = Image.open(level2_path).resize((200, 100))
-    level2_pic = ImageTk.PhotoImage(level2_img)
-
-    level2_button = tk.Button(app, image=level2_pic, command=lambda: open_task2())
-    level2_button.image = level2_pic
-    level2_button.place(x=320, y=200)
-
-    # Level 4 button
-    level4_path = os.path.join(script_dir, "level4.png")
-    level4_img = Image.open(level4_path).resize((200, 100))
-    level4_pic = ImageTk.PhotoImage(level4_img)
-
-    level4_button = tk.Button(app, image=level4_pic, command=lambda: open_task4())
-    level4_button.image = level4_pic
-    level4_button.place(x=320, y=500)
-
-    # Level 3 button
-    level3_path = os.path.join(script_dir, "level3.png")
-    level3_img = Image.open(level3_path).resize((200, 100))
-    level3_pic = ImageTk.PhotoImage(level3_img)
-
-    level3_button = tk.Button(app, image=level3_pic, command=lambda: open_task3())
-    level3_button.image = level3_pic
-    level3_button.place(x=320, y=350)
-
-    # Level 5 button
-    level5_path = os.path.join(script_dir, "level5.png")
-    level5_img = Image.open(level5_path).resize((200, 100))
-    level5_pic = ImageTk.PhotoImage(level5_img)
-
-    level5_button = tk.Button(app, image=level5_pic, command=lambda: open_task5())
-    level5_button.image = level5_pic
-    level5_button.place(x=320, y=650)
-
-def open_task1():
-    for widget in app.place_slaves():
-        widget.place_forget()
-
-    background_label = tk.Label(app, image=background_pic)
-    background_label.place(x=0, y=0, relwidth=1, relheight=1)
-
-    task_heading = tk.Label(app, text="Task 1", font=("Arial", 36))
-    task_heading.place(x=350, y=10)
-
-    task_label = tk.Label(app, text="Plant a tree!", font=("Arial", 40))
-    task_label.place(x=280, y=300)
-
-    completed_path = os.path.join(script_dir, "completed.png")
-    completed_img = Image.open(completed_path).resize((200, 100))
-    completed_pic = ImageTk.PhotoImage(completed_img)
-
-    completed_button = tk.Button(app, image=completed_pic, command=lambda: task_completed1(task_heading, task_label, completed_button))
-    completed_button.image = completed_pic
-    completed_button.place(x=320, y=600)
-
-def open_task2():
-    for widget in app.place_slaves():
-        widget.place_forget()
-    
-    background_label = tk.Label(app, image=background_pic)
-    background_label.place(x=0, y=0, relwidth=1, relheight=1)
-
-    task_heading = tk.Label(app, text="Task 2", font=("Arial", 36))
-    task_heading.place(x=350, y=10)
-
-    task_label = tk.Label(app, text="Listen to calm music!", font=("Arial", 40))
-    task_label.place(x=160, y=300)
-
-    completed_path = os.path.join(script_dir, "completed.png")
-    completed_img = Image.open(completed_path).resize((200, 100))
-    completed_pic = ImageTk.PhotoImage(completed_img)
-
-    completed_button = tk.Button(app, image=completed_pic, command=lambda: task_completed2(task_heading, task_label, completed_button))
-    completed_button.image = completed_pic
-    completed_button.place(x=320, y=600)
-
-def open_task3():
-    for widget in app.place_slaves():
-        widget.place_forget()
-
-    background_label = tk.Label(app, image=background_pic)
-    background_label.place(x=0, y=0, relwidth=1, relheight=1)
-
-    task_heading = tk.Label(app, text="Task 3", font=("Arial", 36))
-    task_heading.place(x=350, y=10)
-
-    task_label = tk.Label(app, text="Turn off the lights!", font=("Arial", 40))
-    task_label.place(x=200, y=300)
-
-    completed_path = os.path.join(script_dir, "completed.png")
-    completed_img = Image.open(completed_path).resize((200, 100))
-    completed_pic = ImageTk.PhotoImage(completed_img)
-
-    completed_button = tk.Button(app, image=completed_pic, command=lambda: task_completed3(task_heading, task_label, completed_button))
-    completed_button.image = completed_pic
-    completed_button.place(x=320, y=600)
-
-def open_task4():
-    for widget in app.place_slaves():
-        widget.place_forget()
-
-    background_label = tk.Label(app, image=background_pic)
-    background_label.place(x=0, y=0, relwidth=1, relheight=1)
-
-    task_heading = tk.Label(app, text="Task 4", font=("Arial", 36))
-    task_heading.place(x=350, y=10)
-
-    task_label = tk.Label(app, text="Go for a walk!", font=("Arial", 40))
-    task_label.place(x=240, y=300)
-
-    completed_path = os.path.join(script_dir, "completed.png")
-    completed_img = Image.open(completed_path).resize((200, 100))
-    completed_pic = ImageTk.PhotoImage(completed_img)
-
-    completed_button = tk.Button(app, image=completed_pic, command=lambda: task_completed4(task_heading, task_label, completed_button))
-    completed_button.image = completed_pic
-    completed_button.place(x=320, y=550)
-
-def open_task5():
-    for widget in app.place_slaves():
-        widget.place_forget()
-
-    background_label = tk.Label(app, image=background_pic)
-    background_label.place(x=0, y=0, relwidth=1, relheight=1)
-
-    task_heading = tk.Label(app, text="Task 5", font=("Arial", 36))
-    task_heading.place(x=350, y=10)
-
-    task_label = tk.Label(app, text="Do some exercise!", font=("Arial", 40))
-    task_label.place(x=200, y=300)
-
-    completed_path = os.path.join(script_dir, "completed.png")
-    completed_img = Image.open(completed_path).resize((200, 100))
-    completed_pic = ImageTk.PhotoImage(completed_img)
-
-    completed_button = tk.Button(app, image=completed_pic, command=lambda: task_completed5(task_heading, task_label, completed_button))
-    completed_button.image = completed_pic
-    completed_button.place(x=300, y=650)
-
-def task_completed1(task_heading, task_label, completed_button):
-    global point_value
-    task_heading.place_forget()
-    task_label.place_forget()
-    completed_button.place_forget()
-
-    tick_path = os.path.join(script_dir, "completed_tick.png")
-    tick_img = Image.open(tick_path).resize((200, 100))
-    tick_pic = ImageTk.PhotoImage(tick_img)
-
-    tick_label = tk.Label(app, image=tick_pic)
-    tick_label.image = tick_pic
-    tick_label.place(x=320, y=600)
-
-    point_value += random.randint(40, 100)
-
-    back_path = os.path.join(script_dir, "back.png")
-    back_img = Image.open(back_path).resize((200, 100))
-    back_pic = ImageTk.PhotoImage(back_img)
-
-    def go_back():
-        tick_label.place_forget()
-        back_button.place_forget()
-        setup_game()
-
-    back_button = tk.Button(app, image=back_pic, command=go_back)
-    back_button.image = back_pic
-    back_button.place(x=5, y=5)
-
-def task_completed2(task_heading, task_label, completed_button):
-    global point_value
-    task_heading.place_forget()
-    task_label.place_forget()
-    completed_button.place_forget()
-
-    tick_path = os.path.join(script_dir, "completed_tick.png")
-    tick_img = Image.open(tick_path).resize((200, 100))
-    tick_pic = ImageTk.PhotoImage(tick_img)
-
-    tick_label = tk.Label(app, image=tick_pic)
-    tick_label.image = tick_pic
-    tick_label.place(x=320, y=600)
-
-    point_value += random.randint(1, 20)
-
-    back_path = os.path.join(script_dir, "back.png")
-    back_img = Image.open(back_path).resize((200, 100))
-    back_pic = ImageTk.PhotoImage(back_img)
-
-    def go_back():
-        tick_label.place_forget()
-        back_button.place_forget()
-        setup_game()
-
-    back_button = tk.Button(app, image=back_pic, command=go_back)
-    back_button.image = back_pic
-    back_button.place(x=5, y=5)
-
-def task_completed3(task_heading, task_label, completed_button):
-    global point_value
-    task_heading.place_forget()
-    task_label.place_forget()
-    completed_button.place_forget()
-
-    tick_path = os.path.join(script_dir, "completed_tick.png")
-    tick_img = Image.open(tick_path).resize((200, 100))
-    tick_pic = ImageTk.PhotoImage(tick_img)
-
-    tick_label = tk.Label(app, image=tick_pic)
-    tick_label.image = tick_pic
-    tick_label.place(x=320, y=600)
-
-    point_value += random.randint(1, 10)
-
-    back_path = os.path.join(script_dir, "back.png")
-    back_img = Image.open(back_path).resize((200, 100))
-    back_pic = ImageTk.PhotoImage(back_img)
-
-    def go_back():
-        tick_label.place_forget()
-        back_button.place_forget()
-        setup_game()
-
-    back_button = tk.Button(app, image=back_pic, command=go_back)
-    back_button.image = back_pic
-    back_button.place(x=5, y=5)
-
-def task_completed4(task_heading, task_label, completed_button):
-    global point_value
-    task_heading.place_forget()
-    task_label.place_forget()
-    completed_button.place_forget()
-
-    tick_path = os.path.join(script_dir, "completed_tick.png")
-    tick_img = Image.open(tick_path).resize((200, 100))
-    tick_pic = ImageTk.PhotoImage(tick_img)
-
-    tick_label = tk.Label(app, image=tick_pic)
-    tick_label.image = tick_pic
-    tick_label.place(x=320, y=600)
-
-    point_value += random.randint(100, 200)
-
-    back_path = os.path.join(script_dir, "back.png")
-    back_img = Image.open(back_path).resize((200, 100))
-    back_pic = ImageTk.PhotoImage(back_img)
-
-    def go_back():
-        tick_label.place_forget()
-        back_button.place_forget()
-        setup_game()
-
-    back_button = tk.Button(app, image=back_pic, command=go_back)
-    back_button.image = back_pic
-    back_button.place(x=5, y=5)
-
-def task_completed5(task_heading, task_label, completed_button):
-    global point_value, tick_label
-    task_heading.place_forget()
-    task_label.place_forget()
-    completed_button.place_forget()
-
-    tick_path = os.path.join(script_dir, "completed_tick.png")
-    tick_img = Image.open(tick_path).resize((200, 100))
-    tick_pic = ImageTk.PhotoImage(tick_img)
-
-    tick_label = tk.Label(app, image=tick_pic)
-    tick_label.image = tick_pic
-    tick_label.place(x=320, y=600)
-
-    point_value += random.randint(100, 200)
-
-    back_path = os.path.join(script_dir, "back.png")
-    back_img = Image.open(back_path).resize((200, 100))
-    back_pic = ImageTk.PhotoImage(back_img)
-
-    def go_back():
-        tick_label.place_forget()
-        back_button.place_forget()
-        setup_game()
-
-    back_button = tk.Button(app, image=back_pic, command=go_back)
-    back_button.image = back_pic
-    back_button.place(x=5, y=5)
-
-# EcoBot function
 chat_sequence = [
     ("EcoChat", "Hello there! How are you feeling today?"),
     {
@@ -518,87 +73,177 @@ chat_sequence = [
     }
 ]
 
-def ecobot():
-    for widget in app.place_slaves():
-        widget.place_forget()
+# --- FUNCTIONS ---
+def update_pm25():
+    st.session_state['pm25_value'] = random.randint(0, 125)
+    time.sleep(1.5)
+    st.rerun()
 
-    back_path = os.path.join(script_dir, "back.png")
-    back_img = Image.open(back_path).resize((200, 100))
-    back_pic = ImageTk.PhotoImage(back_img)
+def get_pm25_status(value):
+    if value < 9:
+        return "Air quality is good and poses little or no risk!", "green"
+    elif 9 <= value < 35:
+        return "Acceptable, but sensitive groups may feel slight effects.", "yellow"
+    elif 35 <= value < 55:
+        return "People with asthma, children, and old people should be cautious.", "orange"
+    elif 55 <= value < 80:
+        return "Everyone may begin to feel health effects.", "#f47126"
+    else:
+        return "Serious health effects, emergency conditions.", "red"
 
-    background_label = tk.Label(app, image=background_pic)
-    background_label.place(x=0, y=0, relwidth=1, relheight=1)
+def update_leaderboard():
+    user_to_update = random.choice(st.session_state['bot_users'])
+    st.session_state['user_scores'][user_to_update] += random.randint(1, 100)
+    st.session_state['user_scores'][st.session_state['name']] = st.session_state['point_value']
 
-    def go_back():
-        back_button.place_forget()
-        for widget in app.place_slaves():
-            widget.place_forget()
-        background_label = tk.Label(app, image=background_pic)
-        background_label.place(x=0, y=0, relwidth=1, relheight=1)
-        setup_game()
+    all_users = st.session_state['bot_users'] + [st.session_state['name']]
+    random.shuffle(all_users)
+    sorted_users = sorted([(user, st.session_state['user_scores'][user]) for user in all_users], key=lambda x: x[1], reverse=True)
+    positions = [f"{i+1}{'st' if i == 0 else 'nd' if i == 1 else 'rd' if i == 2 else 'th'}" for i in range(len(sorted_users))]
+    leaderboard_data = pd.DataFrame({
+        'Position': positions,
+        'Name': [user for user, score in sorted_users],
+        'Score': [score for user, score in sorted_users],
+        'Status': ["Good" if score > 400 else "Needs Improvement" for user, score in sorted_users]
+    })
+    st.session_state['leaderboard_data'] = leaderboard_data
+    time.sleep(1)
+    st.rerun()
 
-    back_button = tk.Button(app, image=back_pic, command=go_back)
-    back_button.image = back_pic
-    back_button.place(x=5, y=5)
+def show_login_page():
+    st.image(Image.open(background_path), use_column_width=True)
+    st.title("EcoBreeze")
+    name_input = st.text_input("QUICK LOGIN", "")
+    if st.button("START"):
+        if name_input.strip():
+            st.session_state['name'] = name_input.strip()
+            st.session_state['user_scores'][st.session_state['name']] = st.session_state['point_value']
+            st.session_state['current_page'] = 'game'
+            st.rerun()
+        else:
+            st.warning("Please enter your name!")
 
-    # Step 2: Create chat display
-    chat_frame = tk.Frame(app, bg="#ffffff", bd=2, relief="sunken")
-    chat_frame.place(x=20, y=20, width=560, height=280)
+def show_game_page():
+    st.image(Image.open(background_path), use_column_width=True)
+    st.title(f"Welcome, {st.session_state['name']}")
+    st.subheader(f"Points: {st.session_state['point_value']}")
 
-    chat_log = tk.Text(chat_frame, bg="#fefefe", fg="#333", font=("Arial", 12), wrap="word")
-    chat_log.pack(fill="both", expand=True)
-    chat_log.config(state='disabled')
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.image(Image.open(ecobot_path).resize((200, 100)), caption="Talk to EcoBot", use_column_width=False, on_click=set_page, kwargs={'page': 'ecobot'}):
+            pass
+    with col2:
+        if st.image(Image.open(ecoquest_path).resize((200, 100)), caption="Explore EcoQuests", use_column_width=False, on_click=set_page, kwargs={'page': 'ecoquest'}):
+            pass
 
-    # Step 3: Button response frame
-    response_frame = tk.Frame(app, bg="#e0f7fa")
-    response_frame.place(x=20, y=310, width=560, height=90)
+    pm25_status, pm25_color = get_pm25_status(st.session_state['pm25_value'])
+    st.markdown(f"<h2 style='text-align: center;'>{st.session_state['pm25_value']} μg/m³ of PM2.5</h2>", unsafe_allow_html=True)
+    st.markdown(f"<p style='text-align: center; color: {pm25_color};'>{pm25_status}</p>", unsafe_allow_html=True)
 
-    # Step 4: Chat sequence control
-    global current_step
-    current_step = 0
+    st.subheader("LEADERBOARD")
+    st.dataframe(st.session_state['leaderboard_data'])
 
-    def display_message(sender, message):
-        chat_log.config(state='normal')
-        chat_log.insert("end", f"{sender}: {message}\n")
-        chat_log.config(state='disabled')
-        chat_log.yview("end")
+    update_pm25()
+    update_leaderboard()
 
-    def clear_buttons():
-        for widget in response_frame.winfo_children():
-            widget.destroy()
+def show_ecoquest_page():
+    st.image(Image.open(background_path), use_column_width=True)
+    if st.image(Image.open(back_path).resize((100, 50)), caption="Back to Game", use_column_width=False, on_click=set_page, kwargs={'page': 'game'}):
+        pass
+    st.title("EcoQuests")
+    col1, col2 = st.columns(2)
+    if col1.image(Image.open(level1_path).resize((200, 100)), caption="Plant a Tree!", use_column_width=False, on_click=set_page, kwargs={'page': 'task1'}):
+        pass
+    if col1.image(Image.open(level2_path).resize((200, 100)), caption="Listen to Calm Music!", use_column_width=False, on_click=set_page, kwargs={'page': 'task2'}):
+        pass
+    if col1.image(Image.open(level3_path).resize((200, 100)), caption="Turn off the Lights!", use_column_width=False, on_click=set_page, kwargs={'page': 'task3'}):
+        pass
+    if col2.image(Image.open(level4_path).resize((200, 100)), caption="Go for a Walk!", use_column_width=False, on_click=set_page, kwargs={'page': 'task4'}):
+        pass
+    if col2.image(Image.open(level5_path).resize((200, 100)), caption="Do some Exercise!", use_column_width=False, on_click=set_page, kwargs={'page': 'task5'}):
+        pass
 
-    def show_next_options():
-        global current_step
-        if current_step >= len(chat_sequence):
-            display_message("EcoChat", "I'm always here if you want to talk again 🌈")
-            clear_buttons()
-            return
+def show_task_page(task_number, task_description, points):
+    st.image(Image.open(background_path), use_column_width=True)
+    if st.image(Image.open(back_path).resize((100, 50)), caption="Back to EcoQuests", use_column_width=False, on_click=set_page, kwargs={'page': 'ecoquest'}):
+        pass
+    st.title(f"Task {task_number}")
+    st.subheader(task_description)
+    if st.image(Image.open(completed_path).resize((200, 100)), caption="Completed", use_column_width=False, on_click=task_completed, kwargs={'points': points}):
+        pass
 
-        step = chat_sequence[current_step]
+def task_completed(points):
+    st.session_state['point_value'] += points
+    st.image(Image.open(completed_tick_path).resize((200, 100)), caption="Task Completed!")
+    time.sleep(1)
+    st.session_state['current_page'] = 'ecoquest'
+    st.rerun()
 
+def show_ecobot_page():
+    st.image(Image.open(background_path), use_column_width=True)
+    if st.image(Image.open(back_path).resize((100, 50)), caption="Back to Game", use_column_width=False, on_click=set_page, kwargs={'page': 'game'}):
+        pass
+    st.title("EcoBot Chat")
+
+    for sender, message in st.session_state['chat_log']:
+        if sender == "You":
+            with st.chat_message("user"):
+                st.write(message)
+        else:
+            with st.chat_message("assistant"):
+                st.write(message)
+
+    if st.session_state['chat_sequence_index'] < len(chat_sequence):
+        step = chat_sequence[st.session_state['chat_sequence_index']]
         if isinstance(step, tuple):
             sender, message = step
-            display_message(sender, message)
-            current_step += 1
-            show_next_options()
-
+            st.session_state['chat_log'].append((sender, message))
+            st.session_state['chat_sequence_index'] += 1
+            st.rerun()
         elif isinstance(step, dict):
-            clear_buttons()
-            for reply, response in step.items():
-                btn = tk.Button(response_frame, text=reply, font=("Arial", 10),
-                                command=lambda r=reply: on_user_reply(r))
-                btn.pack(side="top", pady=3, fill="x", padx=8)
+            columns = st.columns(len(step))
+            keys = list(step.keys())
+            for i, key in enumerate(keys):
+                if columns[i].button(key):
+                    st.session_state['chat_log'].append(("You", key))
+                    response = step[key]
+                    st.session_state['chat_log'].append(response)
+                    st.session_state['chat_sequence_index'] += 1
+                    st.session_state['chat_sequence_index'] = min(st.session_state['chat_sequence_index'], len(chat_sequence))
+                    st.rerun()
+    else:
+        st.info("EcoBot is here to chat whenever you need!")
 
-    def on_user_reply(reply):
-        global current_step
-        display_message("You", reply)
-        response = chat_sequence[current_step][reply]
-        current_step += 1
-        display_message(*response)
-        current_step += 1
-        show_next_options()
+def set_page(page):
+    st.session_state['current_page'] = page
+    if page == 'ecobot' and not st.session_state['chat_log']:
+        st.session_state['chat_sequence_index'] = 0
+        step = chat_sequence[st.session_state['chat_sequence_index']]
+        if isinstance(step, tuple):
+            sender, message = step
+            st.session_state['chat_log'].append((sender, message))
+            st.session_state['chat_sequence_index'] += 1
+    elif page != 'ecobot':
+        st.session_state['chat_log'] = []
+        st.session_state['chat_sequence_index'] = 0
+    st.rerun()
 
-    # Start conversation
-    show_next_options()
-# Start app
-app.mainloop()
+# --- MAIN ---
+if st.session_state['current_page'] == 'login':
+    show_login_page()
+elif st.session_state['current_page'] == 'game':
+    show_game_page()
+elif st.session_state['current_page'] == 'ecoquest':
+    show_ecoquest_page()
+elif st.session_state['current_page'] == 'task1':
+    show_task_page(1, "Plant a tree!", random.randint(40, 100))
+elif st.session_state['current_page'] == 'task2':
+    show_task_page(2, "Listen to calm music!", random.randint(1, 20))
+elif st.session_state['current_page'] == 'task3':
+    show_task_page(3, "Turn off the lights!", random.randint(1, 10))
+elif st.session_state['current_page'] == 'task4':
+    show_task_page(4, "Go for a walk!", random.randint(100, 200))
+elif st.session_state['current_page'] == 'task5':
+    show_task_page(5, "Do some exercise!", random.randint(100, 200))
+elif st.session_state['current_page'] == 'ecobot':
+    show_ecobot_page()

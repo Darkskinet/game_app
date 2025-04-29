@@ -4,9 +4,6 @@ import os
 import random
 import pandas as pd
 import time
-from tkinter import *
-import tkinter as tk
-from tkinter import ttk
 
 # --- PATHS ---
 script_dir = os.path.dirname(os.path.abspath(__file__))

@@ -3,101 +3,114 @@ import random
 from PIL import Image
 import os
 
+# Global variables
+name = ""
+point_value = 0
+current_pm25_value = random.randint(0, 125)
+
 # Script directory
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
-# Load background image
+# Load images
 background_path = os.path.join(script_dir, "background.png")
+ecoquest_path = os.path.join(script_dir, "ecoquest.jpg")
+ecobot_path = os.path.join(script_dir, "ecobot.png")
+completed_path = os.path.join(script_dir, "completed.png")
+tick_path = os.path.join(script_dir, "completed_tick.png")
+back_path = os.path.join(script_dir, "back.png")
+
+# Load images
 background_img = Image.open(background_path)
+ecoquest_img = Image.open(ecoquest_path).resize((200, 100))
+ecobot_img = Image.open(ecobot_path).resize((200, 100))
+completed_img = Image.open(completed_path).resize((200, 100))
+tick_img = Image.open(tick_path).resize((200, 100))
+back_img = Image.open(back_path).resize((200, 100))
 
-# Initialize global variables
-name = ""
-point_value = 0
-user_scores = {}
-bot_users = ["Charlie", "Mark", "Bob"]
+# Streamlit app
+st.set_page_config(page_title="EcoBreeze", layout="wide")
 
-def welcome_screen():
-    global name
-    st.image(background_img, use_column_width=True)
-    st.title("EcoBreeze")
-    name = st.text_input("QUICK LOGIN", "")
-    
-    if st.button("START"):
-        if not name.strip():
-            st.error("Please enter your name!")
-        else:
-            st.session_state['name'] = name
-            setup_game()
+# Background
+st.image(background_img, use_column_width=True)
+
+# Login Section
+st.title("QUICK LOGIN")
+name = st.text_input("Enter your name:", "")
+if st.button("START"):
+    if name.strip() == "":
+        st.error("Please enter your name!")
+    else:
+        st.success(f"Welcome, {name}")
+        setup_game()
 
 def setup_game():
-    global point_value
-    point_value = 0
-    st.title(f"Welcome, {st.session_state['name']}")
-    
-    # EcoQuest Button
-    if st.button("Open EcoQuest"):
-        open_ecoquest()
+    global point_value, current_pm25_value
+
+    # EcoQuest and EcoBot Buttons
+    col1, col2 = st.columns(2)
+    with col1:
+        st.image(ecobot_img, caption="EcoBot", use_column_width=True)
+    with col2:
+        st.image(ecoquest_img, caption="EcoQuest", use_column_width=True)
 
     # PM2.5 Display
-    current_pm25_value = random.randint(0, 125)
-    st.write(f"{current_pm25_value} μg/m3 of PM2.5")
-    display_pm25_status(current_pm25_value)
+    st.write(f"{current_pm25_value}μg/m3 of PM2.5")
+    update_pm25_status(current_pm25_value)
 
     # Points display
     st.write(f"Points: {point_value}")
 
-    # Leaderboard
-    if 'user_scores' not in st.session_state:
-        st.session_state['user_scores'] = {user: random.randint(100, 400) for user in bot_users}
-        st.session_state['user_scores'][st.session_state['name']] = point_value
-    update_leaderboard()
+    # Task Buttons
+    if st.button("Task 1: Plant a tree!"):
+        task_completed(1)
 
-def display_pm25_status(value):
+    if st.button("Task 2: Listen to calm music!"):
+        task_completed(2)
+
+    if st.button("Task 3: Turn off the lights!"):
+        task_completed(3)
+
+    if st.button("Task 4: Go for a walk!"):
+        task_completed(4)
+
+    if st.button("Task 5: Do some exercise!"):
+        task_completed(5)
+
+def update_pm25_status(value):
     if value < 9:
-        st.success("Air quality is good and poses little or no risk!")
+        status = "Air quality is good and poses little or no risk!"
+        status_color = "green"
     elif 9 <= value < 35:
-        st.warning("Acceptable, but sensitive groups may feel slight effects.")
+        status = "Acceptable, but sensitive groups may feel slight effects."
+        status_color = "yellow"
     elif 35 <= value < 55:
-        st.warning("People with asthma, children, and old people should be cautious.")
+        status = "People with asthma, children, and old people should be cautious."
+        status_color = "orange"
     elif 55 <= value < 80:
-        st.error("Everyone may begin to feel health effects.")
+        status = "Everyone may begin to feel health effects."
+        status_color = "#f47126"
     else:
-        st.error("Serious health effects, emergency conditions.")
-
-def update_leaderboard():
-    st.subheader("LEADERBOARD")
-    all_users = list(st.session_state['user_scores'].keys())
-    sorted_users = sorted(all_users, key=lambda x: st.session_state['user_scores'][x], reverse=True)
-    leaderboard_data = [(idx + 1, user, st.session_state['user_scores'][user]) for idx, user in enumerate(sorted_users)]
-    for position, user, score in leaderboard_data:
-        st.write(f"{position}. {user} - {score} points")
-
-def open_ecoquest():
-    st.subheader("Choose a Task:")
-    tasks = {
-        "Task 1: Plant a tree!": (40, "Task 1"),
-        "Task 2: Listen to calm music!": (1, "Task 2"),
-        "Task 3: Turn off the lights!": (1, "Task 3"),
-        "Task 4: Go for a walk!": (100, "Task 4"),
-        "Task 5: Do some exercise!": (100, "Task 5")
-    }
-    selected_task = st.selectbox("Select a task", list(tasks.keys()))
+        status = "Serious health effects, emergency conditions."
+        status_color = "red"
     
-    if st.button("Complete Task"):
-        complete_task(selected_task, tasks[selected_task][0])
+    st.markdown(f"<span style='color:{status_color};'>{status}</span>", unsafe_allow_html=True)
 
-def complete_task(task, points):
+def task_completed(task_number):
     global point_value
-    point_value += random.randint(points, points + 60)  # Random points based on the task
-    st.success(f"You completed: {task}! You earned points!")
-    st.session_state['user_scores'][st.session_state['name']] = point_value
-    update_leaderboard()
+    if task_number == 1:
+        point_value += random.randint(40, 100)
+    elif task_number == 2:
+        point_value += random.randint(1, 20)
+    elif task_number == 3:
+        point_value += random.randint(1, 10)
+    elif task_number == 4:
+        point_value += random.randint(100, 200)
+    elif task_number == 5:
+        point_value += random.randint(100, 200)
 
-def main():
-    if 'name' not in st.session_state:
-        welcome_screen()
-    else:
-        setup_game()
+    st.image(tick_img, caption="Task Completed!", use_column_width=True)
+    st.write(f"Points: {point_value}")
 
+# Run the app
 if __name__ == "__main__":
-    main()
+    st.run()
